@@ -71,45 +71,83 @@ function valueParser (s) {
   return applyParsers(s, [nullParser, booleanParser, numberParser, stringParser])
 }
 
+function jsonParser (s) {
+  let result = {}
+  let parseResult = openCurlyBraceParser(s)
+  if (parseResult === null) {
+    return null
+  }
+
+  while (1) {
+    let rest = parseResult[1]
+    parseResult = keyParser(rest)
+    let key = parseResult[0]
+    rest = parseResult[1]
+    parseResult = valueParser(rest)
+    console.log(parseResult)
+    result[key] = parseResult[0]
+    rest = parseResult[1]
+
+    // finding a } will end the loop
+    let decisionParseResult = closeCurlyBraceParser(rest)
+    if (decisionParseResult !== null) {
+      break
+    }
+    // finding , will continue
+    decisionParseResult = commaParser(rest)
+    console.log(decisionParseResult)
+
+    if (decisionParseResult === null) {
+      // Json code was valid until now
+      return result
+    }
+    parseResult = decisionParseResult
+  }
+  return result
+}
+
 // tests
-let s = '   {where'
-console.log(openCurlyBraceParser(s))
+// let s = '   {where'
+// console.log(openCurlyBraceParser(s))
 
-s = 'this {'
-console.log(openCurlyBraceParser(s))
+// s = 'this {'
+// console.log(openCurlyBraceParser(s))
 
-s = '   }this'
-console.log(closeCurlyBraceParser(s))
+// s = '   }this'
+// console.log(closeCurlyBraceParser(s))
 
-s = '  123.05{'
-console.log(numberParser(s))
+// s = '  123.05{'
+// console.log(numberParser(s))
 
-s = '  "where12x388" is my'
-console.log(stringParser(s))
+// s = '  "where12x388" is my'
+// console.log(stringParser(s))
 
-s = 'true in'
-console.log(booleanParser(s))
+// s = 'true in'
+// console.log(booleanParser(s))
 
-s = 'null here'
-console.log(nullParser(s))
+// s = 'null here'
+// console.log(nullParser(s))
 
-s = ': here'
-console.log(colonParser(s))
+// s = ': here'
+// console.log(colonParser(s))
 
-s = ', stuff'
-console.log(commaParser(s))
+// s = ', stuff'
+// console.log(commaParser(s))
 
-s = '[something here]'
-console.log(openSquareBracketParser(s))
+// s = '[something here]'
+// console.log(openSquareBracketParser(s))
 
-s = '] something'
-console.log(closeSquareBracketParser(s))
+// s = '] something'
+// console.log(closeSquareBracketParser(s))
 
-s = '"name"  : "Ra"'
-console.log(keyParser(s))
+// s = '"name"  : "Ra"'
+// console.log(keyParser(s))
 
-s = 'null in'
-console.log(valueParser(s))
+// s = 'null in'
+// console.log(valueParser(s))
 
-s = '123 or'
-console.log(valueParser(s))
+// s = '123 or'
+// console.log(valueParser(s))
+
+s = '{"name": "something", "ro": 2235}'
+console.log(jsonParser(s))
