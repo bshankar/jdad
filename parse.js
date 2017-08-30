@@ -1,128 +1,90 @@
-/*
-Before parsing, remove all whitespace characters from the Json string. 
-So that we don't need to parse the optional spaces again and again.
-*/
+function regexParser (pattern, parseFunction, s) {
+  // find leading whitespaces
+  let regex = new RegExp('\\s*' + pattern)
+  let matched = s.match(regex)
 
-function charParser (ch, s) {
-  if (s[0] === ch) {
-    return [s[0], s.slice(1)]
-  }
-  return null
-}
-
-function regexParser (regex, parseFunction, s) {
-  let foundMatch = s.match(regex)
-
-  if (foundMatch === null) {
+  if (matched === null) {
     return null
   }
 
-  if (parseFunction === null) {
-    // use identify function as default 
-    parseFunction = function (e) {
-      return e
-    }
-  }
-
-  if (foundMatch.index === 0) {
-    return [parseFunction(foundMatch[0]), s.slice(foundMatch[0].length)]
+  // remove leading whitespaces
+  let len = matched[0].length
+  matched[0] = matched[0].trim()
+  if (matched.index === 0) {
+    let result = (parseFunction !== null) ? parseFunction(matched[0]) : matched[0]
+    return [result, s.slice(len)]
   }
   return null
 }
 
-function booleanParser (s) {
-  if (s.slice(0, 4) === 'true') {
-    return [true, s.slice(4)]
-  }
-  if (s.slice(0, 5) === 'false') {
-    return [false, s.slice(5)]
-  }
-
-  return null
-}
-
-function nullParser (s) {
-  if (s.slice(0, 4) === 'null') {
-    return [null, s.slice(4)]
-  }
-  return null
-}
-
-// define some fundamental parsers 
-const openCurlyBraceParser = charParser.bind(null, '{')
-const closeCurlyBraceParser = charParser.bind(null, '}')
-const commaParser = charParser.bind(null, ',')
-const colonParser = charParser.bind(null, ':')
-const openSquareBracketParser = charParser.bind(null, '[')
-const closeSquareBracketParser = charParser.bind(null, ']')
-const numberParser = regexParser.bind(null, /\d+.?\d+e?\d+/, parseFloat)
-
-const stringParser = regexParser.bind(null, /"\w+"/, function (s) {
-  return s.slice(1, s.length - 1)
-})
-
-// define some higher level parsers
-
-function keyParser (s) {
-  // composite of stringParser, colonParser
-  let parsersToTest = [stringParser, colonParser]
-  let result = stringParser(s)
-  if (result === null) {
-    return null
-  }
-
-  let key = result[0]
-  let rest = result[1]
-  let optionalSpacesResult = spaceParser(rest)
-  if (optionalSpacesResult !== null) {
-    rest = optionalSpacesResult[1]
-  }
-
-  result = colonParser(rest)
-  if (result === null) {
-    return null
-  }
-  return [key, result[1]]
-}
-
-function valueParser (s) {
-  let parsersToTest = [nullParser, booleanParser, numberParser, stringParser]
-  for (let parser in parsersToTest) {
-    let result = parsersToTest[parser](s)
-    if (result !== null) {
+function applyParsers (s, parsers) {
+  // apply parsers in sequence
+  for (let i in parsers) {
+    let result = parsers[i](s)
+    if (result != null) {
       return result
     }
   }
   return null
 }
 
-function arrayParser(s) {
-  
+// define some fundamental parsers 
+const openCurlyBraceParser = regexParser.bind(null, '{', null)
+const closeCurlyBraceParser = regexParser.bind(null, '}', null)
+const commaParser = regexParser.bind(null, ',', null)
+const colonParser = regexParser.bind(null, ':', null)
+const openSquareBracketParser = regexParser.bind(null, '\\[', null)
+const closeSquareBracketParser = regexParser.bind(null, '\\]', null)
+const numberParser = regexParser.bind(null, '\\d+.?\\d+e?\\d+', parseFloat)
+
+const booleanParser = regexParser.bind(null, '(true|false)', function (s) {
+  return s === 'true'
+})
+
+const nullParser = regexParser.bind(null, 'null', function (s) {
   return null
+})
+
+const stringParser = regexParser.bind(null, '"\\w+"', function (s) {
+  return s.slice(1, s.length - 1)
+})
+
+function keyParser (s) {
+  let result = stringParser(s)
+
+  if (result === null) {
+    return null
+  }
+
+  let key = result[0]
+  let rest = result[1]
+  result = colonParser(rest)
+
+  if (result === null) {
+    return null
+  }
+
+  return [key, result[1]]
 }
 
-// define the json parser
-function jsonParser(s) {
-  
+function valueParser (s) {
+  return applyParsers(s, [nullParser, booleanParser, numberParser, stringParser])
 }
 
 // tests
-let s = '{where'
+let s = '   {where'
 console.log(openCurlyBraceParser(s))
 
 s = 'this {'
 console.log(openCurlyBraceParser(s))
 
-s = '}this'
+s = '   }this'
 console.log(closeCurlyBraceParser(s))
 
-s = '   is'
-console.log(spaceParser(s))
-
-s = '123.05{'
+s = '  123.05{'
 console.log(numberParser(s))
 
-s = '"where12x388" is my'
+s = '  "where12x388" is my'
 console.log(stringParser(s))
 
 s = 'true in'
