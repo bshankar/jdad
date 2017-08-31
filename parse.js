@@ -35,7 +35,7 @@ const commaParser = regexParser.bind(null, ',', null)
 const colonParser = regexParser.bind(null, ':', null)
 const openSquareBracketParser = regexParser.bind(null, '\\[', null)
 const closeSquareBracketParser = regexParser.bind(null, '\\]', null)
-const numberParser = regexParser.bind(null, '\\d+.?\\d+e?\\d+', parseFloat)
+const numberParser = regexParser.bind(null, '[0-9]+\\.?[0-9]*e?[0-9]*', parseFloat)
 
 const booleanParser = regexParser.bind(null, '(true|false)', function (s) {
   return s === 'true'
@@ -68,7 +68,35 @@ function keyParser (s) {
 }
 
 function valueParser (s) {
-  return applyParsers(s, [nullParser, booleanParser, numberParser, stringParser])
+  return applyParsers(s, [nullParser, booleanParser, numberParser, stringParser, arrayParser, jsonParser])
+}
+
+function arrayParser (s) {
+  let result = []
+  let parseResult = openSquareBracketParser(s)
+
+  if (parseResult === null) {
+    return null
+  }
+
+  while (1) {
+    parseResult = valueParser(parseResult[1])
+    if (parseResult === null) {
+      return [result, parseResult]
+    }
+
+    result.push(parseResult[0])
+    let decisionParseResult = closeSquareBracketParser(parseResult[1])
+    if (decisionParseResult !== null) {
+      return [result, decisionParseResult[1]]
+    }
+
+    decisionParseResult = commaParser(parseResult[1])
+    if (decisionParseResult === null) {
+      return [result, parseResult[1]]
+    }
+    parseResult = decisionParseResult
+  }
 }
 
 function jsonParser (s) {
@@ -84,30 +112,29 @@ function jsonParser (s) {
     let key = parseResult[0]
     rest = parseResult[1]
     parseResult = valueParser(rest)
-    console.log(parseResult)
     result[key] = parseResult[0]
     rest = parseResult[1]
 
     // finding a } will end the loop
     let decisionParseResult = closeCurlyBraceParser(rest)
     if (decisionParseResult !== null) {
+      parseResult = decisionParseResult
       break
     }
     // finding , will continue
     decisionParseResult = commaParser(rest)
-    console.log(decisionParseResult)
 
     if (decisionParseResult === null) {
       // Json code was valid until now
-      return result
+      return [result, parseResult[1]]
     }
     parseResult = decisionParseResult
   }
-  return result
+  return [result, parseResult[1]]
 }
 
 // tests
-// let s = '   {where'
+let s = '   {where'
 // console.log(openCurlyBraceParser(s))
 
 // s = 'this {'
@@ -149,5 +176,24 @@ function jsonParser (s) {
 // s = '123 or'
 // console.log(valueParser(s))
 
-s = '{"name": "something", "ro": 2235}'
-console.log(jsonParser(s))
+// s = '{"name": "something", "ro": 2235, "dead": true}'
+// console.log(jsonParser(s))
+
+// s = '  1,'
+// console.log(numberParser(s))
+
+// s = '  true, '
+// console.log(valueParser(s))
+
+// s = 'true, '
+// console.log(valueParser(s))
+
+// s = '[1, true, "hi"]'
+// console.log(arrayParser(s))
+
+// s = '{"name": "stuff", "ro": [3, 2, "hi", [44, true]]}'
+// console.log(jsonParser(s))
+
+s = '{"name": 23, "tugo": [1, 2, 3], "address": {"one": 1, "time": true, "room": {"map": "top"}}}'
+let obj = jsonParser(s)[0]
+console.log(obj)
