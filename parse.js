@@ -1,30 +1,37 @@
 function regexParser (pattern, parseFunction, s) {
-  // find leading whitespaces
-  let regex = new RegExp('\\s*' + pattern)
-  let matched = s.match(regex)
-
-  if (matched === null) {
+  if (s === null) {
+    // nothing to be done!
     return null
   }
 
-  // remove leading whitespaces
-  let len = matched[0].length
-  matched[0] = matched[0].trim()
-  if (matched.index === 0) {
-    let result = (parseFunction !== null) ? parseFunction(matched[0]) : matched[0]
-    return [result, s.slice(len)]
+  if (s instanceof Array) {
+    // this is the output from another parser
+    // we should consider only the remaining string 
+    s = s[1]
   }
-  return null
+
+  // leading whitespaces do not matter
+  // we find them and remove them later
+  const regex = new RegExp('\\s*' + pattern)
+  let matched = s.match(regex)
+
+  if (matched === null) {
+    // parsing failed
+    return null
+  }
+  return afterRegexMatch(s, matched, parseFunction)
 }
 
-function applyParsers (s, parsers) {
-  // apply parsers in sequence
-  for (let i in parsers) {
-    let result = parsers[i](s)
-    if (result !== null) {
-      return result
-    }
+function afterRegexMatch (s, matched, parseFunction) {
+  // Processing after a successful RegExp match
+  const len = matched[0].length
+  matched[0] = matched[0].trim() // remove leading whitespaces
+  if (matched.index === 0) {
+    // apply the function to parse fundamental values (if provided)
+    const result = (parseFunction !== null) ? parseFunction(matched[0]) : matched[0]
+    return [result, s.slice(len)] // parsing was successful!
   }
+  // parsing failed
   return null
 }
 
@@ -38,37 +45,47 @@ const closeSquareBracketParser = regexParser.bind(null, '\\]', null)
 const numberParser = regexParser.bind(null, '[0-9]+\\.?[0-9]*e?[0-9]*', parseFloat)
 
 const booleanParser = regexParser.bind(null, '(true|false)', function (s) {
+  // eval function for boolean values
+  // 'true' -> true
+  // 'false' -> false
   return s === 'true'
 })
 
 const nullParser = regexParser.bind(null, 'null', function (s) {
+  // 'null' -> null
   return null
 })
 
 const stringParser = regexParser.bind(null, '"[^"]*"', function (s) {
+  // remove the surrounding double quotes
   return s.slice(1, s.length - 1)
 })
 
 function keyParser (s) {
   let result = stringParser(s)
-
   if (result === null) {
     return null
   }
 
   let key = result[0]
-  let rest = result[1]
-  result = colonParser(rest)
-
+  result = colonParser(result)
   if (result === null) {
     return null
   }
-
   return [key, result[1]]
 }
 
 function valueParser (s) {
-  return applyParsers(s, [nullParser, booleanParser, numberParser, stringParser, arrayParser, objectParser])
+  const parsers = [nullParser, booleanParser, numberParser, stringParser, arrayParser, objectParser]
+  // try various parsers in sequence
+  // and return the first successful parse
+  for (let i in parsers) {
+    let result = parsers[i](s)
+    if (result !== null) {
+      return result
+    }
+  }
+  return null
 }
 
 function arrayParser (s) {
@@ -85,7 +102,6 @@ function arrayParser (s) {
     parseResult = valueParser(rest)
 
     if (parseResult === null) {
-      // console.log(rest)
       parseResult = closeSquareBracketParser(rest)
       return [result, parseResult[1]]
     }
@@ -179,7 +195,10 @@ console.log(openSquareBracketParser(s))
 s = '] closeSquareBracketParser'
 console.log(closeSquareBracketParser(s))
 
-s = '"name"  : "keyParser"'
+s = '   :   colonParser'
+console.log(colonParser(s))
+
+s = '  "name"  :  "keyParser"'
 console.log(keyParser(s))
 
 s = 'null in valueParser'
