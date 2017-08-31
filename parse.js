@@ -21,7 +21,7 @@ function applyParsers (s, parsers) {
   // apply parsers in sequence
   for (let i in parsers) {
     let result = parsers[i](s)
-    if (result != null) {
+    if (result !== null) {
       return result
     }
   }
@@ -68,7 +68,7 @@ function keyParser (s) {
 }
 
 function valueParser (s) {
-  return applyParsers(s, [nullParser, booleanParser, numberParser, stringParser, arrayParser, jsonParser])
+  return applyParsers(s, [nullParser, booleanParser, numberParser, stringParser, arrayParser, objectParser])
 }
 
 function arrayParser (s) {
@@ -79,10 +79,15 @@ function arrayParser (s) {
     return null
   }
 
+  let rest = parseResult[1]
+
   while (1) {
-    parseResult = valueParser(parseResult[1])
+    parseResult = valueParser(rest)
+
     if (parseResult === null) {
-      return [result, parseResult]
+      // console.log(rest)
+      parseResult = closeSquareBracketParser(rest)
+      return [result, parseResult[1]]
     }
 
     result.push(parseResult[0])
@@ -96,10 +101,11 @@ function arrayParser (s) {
       return [result, parseResult[1]]
     }
     parseResult = decisionParseResult
+    rest = decisionParseResult[1]
   }
 }
 
-function jsonParser (s) {
+function objectParser (s) {
   let result = {}
   let parseResult = openCurlyBraceParser(s)
   if (parseResult === null) {
@@ -109,6 +115,12 @@ function jsonParser (s) {
   while (1) {
     let rest = parseResult[1]
     parseResult = keyParser(rest)
+
+    if (parseResult === null) {
+      parseResult = closeCurlyBraceParser(rest)
+      return [result, parseResult[1]]
+    }
+
     let key = parseResult[0]
     rest = parseResult[1]
     parseResult = valueParser(rest)
@@ -134,66 +146,83 @@ function jsonParser (s) {
 }
 
 // tests
-let s = '   {where'
-// console.log(openCurlyBraceParser(s))
+let s = '   {openCurlyBraceParser'
+console.log(openCurlyBraceParser(s))
 
-// s = 'this {'
-// console.log(openCurlyBraceParser(s))
+s = 'openCurlyBraceParser {'
+console.log(openCurlyBraceParser(s))
 
-// s = '   }this'
-// console.log(closeCurlyBraceParser(s))
+s = '   }closeCurlyBraceParser'
+console.log(closeCurlyBraceParser(s))
 
-// s = '  123.05{'
-// console.log(numberParser(s))
+s = '  123.05{numberParser'
+console.log(numberParser(s))
 
-// s = '  "where12x388" is my'
-// console.log(stringParser(s))
+s = '  "where12x388" is my stringParser'
+console.log(stringParser(s))
 
-// s = 'true in'
-// console.log(booleanParser(s))
+s = 'true in booleanParser'
+console.log(booleanParser(s))
 
-// s = 'null here'
-// console.log(nullParser(s))
+s = 'null here in nullParser'
+console.log(nullParser(s))
 
-// s = ': here'
-// console.log(colonParser(s))
+s = ': here in colonParser'
+console.log(colonParser(s))
 
-// s = ', stuff'
-// console.log(commaParser(s))
+s = ', stuff in commaParser'
+console.log(commaParser(s))
 
-// s = '[something here]'
-// console.log(openSquareBracketParser(s))
+s = '[openSquareBracketParser]'
+console.log(openSquareBracketParser(s))
 
-// s = '] something'
-// console.log(closeSquareBracketParser(s))
+s = '] closeSquareBracketParser'
+console.log(closeSquareBracketParser(s))
 
-// s = '"name"  : "Ra"'
-// console.log(keyParser(s))
+s = '"name"  : "keyParser"'
+console.log(keyParser(s))
 
-// s = 'null in'
-// console.log(valueParser(s))
+s = 'null in valueParser'
+console.log(valueParser(s))
 
-// s = '123 or'
-// console.log(valueParser(s))
+s = '123 or'
+console.log(valueParser(s))
 
-// s = '{"name": "something", "ro": 2235, "dead": true}'
-// console.log(jsonParser(s))
+s = '{"name": "something", "ro": 2235, "dead": true}'
+console.log(objectParser(s))
 
-// s = '  1,'
-// console.log(numberParser(s))
+s = '  1,'
+console.log(numberParser(s))
 
-// s = '  true, '
-// console.log(valueParser(s))
+s = '  true, '
+console.log(valueParser(s))
 
-// s = 'true, '
-// console.log(valueParser(s))
+s = 'true, '
+console.log(valueParser(s))
 
-// s = '[1, true, "hi"]'
-// console.log(arrayParser(s))
+s = '[1, true, "hi"]'
+console.log(arrayParser(s))
 
-// s = '{"name": "stuff", "ro": [3, 2, "hi", [44, true]]}'
-// console.log(jsonParser(s))
+s = '{"name": "stuff", "ro": [3, 2, "hi", [44, true]]}'
+console.log(objectParser(s))
 
-s = '{"name": 23, "tugo": [1, 2, 3], "address": {"one": 1, "time": true, "room": {"map": "top"}}}'
-let obj = jsonParser(s)[0]
+s = '[]'
+console.log(arrayParser(s))
+
+s = '[1, 2]'
+console.log(arrayParser(s))
+
+s = '{"name": 1}'
+console.log(objectParser(s))
+
+s = '{}'
+console.log(objectParser(s))
+
+s = '{"name": []}'
+console.log(objectParser(s))
+
+s = '{"name": 23, "tugo": [1, 2, [3, null]], "address": {"one": 1, "time": true, "room": {"map": "top"}}}'
+let obj = objectParser(s)
 console.log(obj)
+console.log(obj[0].tugo)
+console.log(obj[0].address)
