@@ -45,7 +45,7 @@ const nullParser = regexParser.bind(null, 'null', function (s) {
   return null
 })
 
-const stringParser = regexParser.bind(null, '"\\w+"', function (s) {
+const stringParser = regexParser.bind(null, '"[^"]*"', function (s) {
   return s.slice(1, s.length - 1)
 })
 
@@ -221,7 +221,7 @@ console.log(objectParser(s))
 s = '{"name": []}'
 console.log(objectParser(s))
 
-s = '{"name": 23, "tugo": [1, 2, [3, null]], "address": {"one": 1, "time": true, "room": {"map": "top"}}}'
+s = '{"name": "nu-12", "tugo": [1, 2, [3, null]], "address": {"one": 1, "time": true, "room": {"map": "top"}}}'
 let obj = objectParser(s)
 console.log(obj)
 console.log(obj[0].tugo)
