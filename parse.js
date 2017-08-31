@@ -35,14 +35,7 @@ function afterRegexMatch (s, matched, parseFunction) {
   return null
 }
 
-// define some fundamental parsers 
-const openCurlyBraceParser = regexParser.bind(null, '{', null)
-const closeCurlyBraceParser = regexParser.bind(null, '}', null)
-const commaParser = regexParser.bind(null, ',', null)
-const colonParser = regexParser.bind(null, ':', null)
-const openSquareBracketParser = regexParser.bind(null, '\\[', null)
-const closeSquareBracketParser = regexParser.bind(null, '\\]', null)
-const numberParser = regexParser.bind(null, '[0-9]+\\.?[0-9]*e?[0-9]*', parseFloat)
+const numberParser = regexParser.bind(null, '\\d+\\.?\\d*e?\\d*', parseFloat)
 
 const booleanParser = regexParser.bind(null, '(true|false)', function (s) {
   // eval function for boolean values
@@ -62,13 +55,15 @@ const stringParser = regexParser.bind(null, '"[^"]*"', function (s) {
 })
 
 function keyParser (s) {
+  // To look for a key, we need to find
+  // a string and a colon
   let result = stringParser(s)
   if (result === null) {
     return null
   }
 
   let key = result[0]
-  result = colonParser(result)
+  result = regexParser(':', null, result)
   if (result === null) {
     return null
   }
@@ -76,9 +71,9 @@ function keyParser (s) {
 }
 
 function valueParser (s) {
-  const parsers = [nullParser, booleanParser, numberParser, stringParser, arrayParser, objectParser]
   // try various parsers in sequence
   // and return the first successful parse
+  const parsers = [nullParser, booleanParser, numberParser, stringParser, arrayParser, objectParser]
   for (let i in parsers) {
     let result = parsers[i](s)
     if (result !== null) {
@@ -90,40 +85,36 @@ function valueParser (s) {
 
 function arrayParser (s) {
   let result = []
-  let parseResult = openSquareBracketParser(s)
-
+  let parseResult = regexParser('\\[', null, s) // find a [ 
   if (parseResult === null) {
     return null
   }
 
-  let rest = parseResult[1]
-
   while (1) {
+    let rest = parseResult[1]
     parseResult = valueParser(rest)
-
     if (parseResult === null) {
-      parseResult = closeSquareBracketParser(rest)
+      parseResult = regexParser('\\]', null, rest)
       return [result, parseResult[1]]
     }
 
     result.push(parseResult[0])
-    let decisionParseResult = closeSquareBracketParser(parseResult[1])
+    let decisionParseResult = regexParser('\\]', null, parseResult[1])
     if (decisionParseResult !== null) {
       return [result, decisionParseResult[1]]
     }
 
-    decisionParseResult = commaParser(parseResult[1])
+    decisionParseResult = regexParser(',', null, parseResult[1])
     if (decisionParseResult === null) {
       return [result, parseResult[1]]
     }
     parseResult = decisionParseResult
-    rest = decisionParseResult[1]
   }
 }
 
 function objectParser (s) {
   let result = {}
-  let parseResult = openCurlyBraceParser(s)
+  let parseResult = regexParser('{', null, s)
   if (parseResult === null) {
     return null
   }
@@ -133,7 +124,7 @@ function objectParser (s) {
     parseResult = keyParser(rest)
 
     if (parseResult === null) {
-      parseResult = closeCurlyBraceParser(rest)
+      parseResult = regexParser('}', null, rest)
       return [result, parseResult[1]]
     }
 
@@ -144,13 +135,13 @@ function objectParser (s) {
     rest = parseResult[1]
 
     // finding a } will end the loop
-    let decisionParseResult = closeCurlyBraceParser(rest)
+    let decisionParseResult = regexParser('}', null, rest)
     if (decisionParseResult !== null) {
       parseResult = decisionParseResult
       break
     }
     // finding , will continue
-    decisionParseResult = commaParser(rest)
+    decisionParseResult = regexParser(',', null, rest)
 
     if (decisionParseResult === null) {
       // Json code was valid until now
@@ -163,13 +154,7 @@ function objectParser (s) {
 
 // tests
 let s = '   {openCurlyBraceParser'
-console.log(openCurlyBraceParser(s))
-
-s = 'openCurlyBraceParser {'
-console.log(openCurlyBraceParser(s))
-
-s = '   }closeCurlyBraceParser'
-console.log(closeCurlyBraceParser(s))
+console.log(regexParser('{', null, s))
 
 s = '  123.05{numberParser'
 console.log(numberParser(s))
@@ -183,21 +168,6 @@ console.log(booleanParser(s))
 s = 'null here in nullParser'
 console.log(nullParser(s))
 
-s = ': here in colonParser'
-console.log(colonParser(s))
-
-s = ', stuff in commaParser'
-console.log(commaParser(s))
-
-s = '[openSquareBracketParser]'
-console.log(openSquareBracketParser(s))
-
-s = '] closeSquareBracketParser'
-console.log(closeSquareBracketParser(s))
-
-s = '   :   colonParser'
-console.log(colonParser(s))
-
 s = '  "name"  :  "keyParser"'
 console.log(keyParser(s))
 
@@ -207,41 +177,24 @@ console.log(valueParser(s))
 s = '123 or'
 console.log(valueParser(s))
 
-s = '{"name": "something", "ro": 2235, "dead": true}'
-console.log(objectParser(s))
-
-s = '  1,'
-console.log(numberParser(s))
-
-s = '  true, '
-console.log(valueParser(s))
-
-s = 'true, '
-console.log(valueParser(s))
+s = '[]'
+console.log(arrayParser(s))
 
 s = '[1, true, "hi"]'
 console.log(arrayParser(s))
 
-s = '{"name": "stuff", "ro": [3, 2, "hi", [44, true]]}'
+s = '{}'
 console.log(objectParser(s))
-
-s = '[]'
-console.log(arrayParser(s))
-
-s = '[1, 2]'
-console.log(arrayParser(s))
 
 s = '{"name": 1}'
 console.log(objectParser(s))
 
-s = '{}'
+s = '{"name": "something", "ro": 2235, "dead": true}'
 console.log(objectParser(s))
 
-s = '{"name": []}'
+s = '{"name": "stuff", "ro": [3, 2, "hi", [44, true]]}'
 console.log(objectParser(s))
 
 s = '{"name": "nu-12", "tugo": [1, 2, [3, null]], "address": {"one": 1, "time": true, "room": {"map": "top"}}}'
 let obj = objectParser(s)
 console.log(obj)
-console.log(obj[0].tugo)
-console.log(obj[0].address)
