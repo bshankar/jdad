@@ -9,7 +9,6 @@ function regexParser (pattern, parseFunction, s) {
     // we should consider only the remaining string 
     s = s[1]
   }
-
   // leading whitespaces do not matter
   // we find them and remove them later
   const regex = new RegExp('\\s*' + pattern)
@@ -97,13 +96,13 @@ function arrayParser (s) {
       parseResult = regexParser('\\]', null, rest)
       return [result, parseResult[1]]
     }
-
     result.push(parseResult[0])
+    // finding a ] will end the array
     let decisionParseResult = regexParser('\\]', null, parseResult[1])
     if (decisionParseResult !== null) {
       return [result, decisionParseResult[1]]
     }
-
+    // check if a next element exists using ,
     decisionParseResult = regexParser(',', null, parseResult[1])
     if (decisionParseResult === null) {
       return [result, parseResult[1]]
@@ -122,7 +121,6 @@ function objectParser (s) {
   while (1) {
     let rest = parseResult[1]
     parseResult = keyParser(rest)
-
     if (parseResult === null) {
       parseResult = regexParser('}', null, rest)
       return [result, parseResult[1]]
@@ -142,9 +140,7 @@ function objectParser (s) {
     }
     // finding , will continue
     decisionParseResult = regexParser(',', null, rest)
-
     if (decisionParseResult === null) {
-      // Json code was valid until now
       return [result, parseResult[1]]
     }
     parseResult = decisionParseResult
