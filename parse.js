@@ -1,154 +1,77 @@
-function regexParser (pattern, parseFunction, s) {
-  if (s === null) {
-    // nothing to be done!
-    return null
-  }
-
-  if (s instanceof Array) {
-    // this is the output from another parser
-    // we should consider only the remaining string 
-    s = s[1]
-  }
-  // leading whitespaces do not matter
-  // we find them and remove them later
-  const regex = new RegExp('\\s*' + pattern)
+function regexParser (pattern, evalFn, s) {
+  const regex = new RegExp('^\\s*' + pattern)
   let matched = s.match(regex)
-
-  if (matched === null) {
-    // parsing failed
-    return null
-  }
-  return afterRegexMatch(s, matched, parseFunction)
+  if (!matched) return null
+  return afterRegexMatch(s, matched, evalFn)
 }
 
-function afterRegexMatch (s, matched, parseFunction) {
-  // Processing after a successful RegExp match
+function afterRegexMatch (s, matched, evalFn) {
   const len = matched[0].length
-  matched[0] = matched[0].trim() // remove leading whitespaces
+  matched[0] = matched[0].trim()
   if (matched.index === 0) {
-    // apply the function to parse fundamental values (if provided)
-    const result = (parseFunction !== null) ? parseFunction(matched[0]) : matched[0]
-    return [result, s.slice(len)] // parsing was successful!
+    const result = (evalFn !== null) ? evalFn(matched[0]) : matched[0]
+    return [result, s.slice(len)]
   }
-  // parsing failed
   return null
 }
 
 const numberParser = regexParser.bind(null, '\\d+\\.?\\d*e?\\d*', parseFloat)
-
-const booleanParser = regexParser.bind(null, '(true|false)', function (s) {
-  // eval function for boolean values
-  // 'true' -> true
-  // 'false' -> false
-  return s === 'true'
-})
-
-const nullParser = regexParser.bind(null, 'null', function (s) {
-  // 'null' -> null
-  return null
-})
-
-const stringParser = regexParser.bind(null, '"[^"]*"', function (s) {
-  // remove the surrounding double quotes
-  return s.slice(1, s.length - 1)
-})
+const booleanParser = regexParser.bind(null, '(true|false)', function (s) { return s === 'true'})
+const nullParser = regexParser.bind(null, 'null', function (s) { return null })
+const stringParser = regexParser.bind(null, '"[^"]*"', function (s) { return s.slice(1, s.length - 1) })
 
 function keyParser (s) {
-  // To look for a key, we need to find
-  // a string and a colon
   let result = stringParser(s)
-  if (result === null) {
-    return null
-  }
+  if (!result) return null
 
   let key = result[0]
-  result = regexParser(':', null, result)
-  if (result === null) {
-    return null
-  }
+  result = regexParser(':', null, result[1])
+  if (!result) return null
   return [key, result[1]]
 }
 
 function valueParser (s) {
-  // try various parsers in sequence
-  // and return the first successful parse
-  const parsers = [nullParser, booleanParser, numberParser, stringParser, arrayParser, objectParser]
+  const parsers = [nullParser, booleanParser, numberParser, stringParser, arrObjParser]
   for (let i in parsers) {
     let result = parsers[i](s)
-    if (result !== null) {
-      return result
-    }
+    if (result) return result
   }
   return null
 }
 
-function arrayParser (s) {
-  let result = []
-  let parseResult = regexParser('\\[', null, s) // find a [ 
-  if (parseResult === null) {
-    return null
-  }
+function arrObjParser (s) {
+  const isArray = regexParser('\\[', null, s) !== null
+  let obj = isArray ? [] : {}
+  const delim = isArray ? ['\\[', '\\]'] : ['{', '}']
+  let result = regexParser(delim[0], null, s)
+  if (!result) return null
 
   while (1) {
-    let rest = parseResult[1]
-    parseResult = valueParser(rest)
-    if (parseResult === null) {
-      parseResult = regexParser('\\]', null, rest)
-      return [result, parseResult[1]]
+    let rest = result[1]
+    result = isArray ? valueParser(rest) : keyParser(rest)
+    if (!result) return [obj, regexParser(delim[1], null, rest)[1]]
+
+    if (isArray) obj.push(result[0])
+    else {
+      let key = result[0]
+      rest = result[1]
+      result = valueParser(rest)
+      obj[key] = result[0]
+      rest = result[1]
     }
-    result.push(parseResult[0])
-    // finding a ] will end the array
-    let decisionParseResult = regexParser('\\]', null, parseResult[1])
-    if (decisionParseResult !== null) {
-      return [result, decisionParseResult[1]]
-    }
-    // check if a next element exists using ,
-    decisionParseResult = regexParser(',', null, parseResult[1])
-    if (decisionParseResult === null) {
-      return [result, parseResult[1]]
-    }
-    parseResult = decisionParseResult
+
+    let decidingResult = regexParser(delim[1], null, result[1])
+    if (decidingResult) return [obj, decidingResult[1]]
+    decidingResult = regexParser(',', null, result[1])
+    if (!decidingResult) return [obj, result[1]]
+    result = decidingResult
   }
-}
-
-function objectParser (s) {
-  let result = {}
-  let parseResult = regexParser('{', null, s)
-  if (parseResult === null) {
-    return null
-  }
-
-  while (1) {
-    let rest = parseResult[1]
-    parseResult = keyParser(rest)
-    if (parseResult === null) {
-      parseResult = regexParser('}', null, rest)
-      return [result, parseResult[1]]
-    }
-
-    let key = parseResult[0]
-    rest = parseResult[1]
-    parseResult = valueParser(rest)
-    result[key] = parseResult[0]
-    rest = parseResult[1]
-
-    // finding a } will end the loop
-    let decisionParseResult = regexParser('}', null, rest)
-    if (decisionParseResult !== null) {
-      parseResult = decisionParseResult
-      break
-    }
-    // finding , will continue
-    decisionParseResult = regexParser(',', null, rest)
-    if (decisionParseResult === null) {
-      return [result, parseResult[1]]
-    }
-    parseResult = decisionParseResult
-  }
-  return [result, parseResult[1]]
 }
 
 // tests
+// ====================================
+//  fundamental values
+// ====================================
 let s = '   {openCurlyBraceParser'
 console.log(regexParser('{', null, s))
 
@@ -173,24 +96,59 @@ console.log(valueParser(s))
 s = '123 or'
 console.log(valueParser(s))
 
+// ====================================
+// simple arrays
+// ====================================
+
 s = '[]'
-console.log(arrayParser(s))
+console.log(arrObjParser(s))
 
 s = '[1, true, "hi"]'
-console.log(arrayParser(s))
+console.log(arrObjParser(s))
+
+// ====================================
+// simple objects
+// ====================================
 
 s = '{}'
-console.log(objectParser(s))
+console.log(arrObjParser(s))
 
 s = '{"name": 1}'
-console.log(objectParser(s))
+console.log(arrObjParser(s))
 
 s = '{"name": "something", "ro": 2235, "dead": true}'
-console.log(objectParser(s))
+console.log(arrObjParser(s))
 
+// ====================================
+// nested arrays
+// ====================================
+
+s = '[1, null, [133, false]]'
+console.log(arrObjParser(s))
+
+// ====================================
+// nested objects
+// ====================================
+s = '{"name": 18, "address": {"street": 19}}'
+console.log(arrObjParser(s))
+
+// ====================================
+// arrays inside objects
+// ====================================
+s = '{"names": [1, 2, 3, 4], "other": true}'
+console.log(arrObjParser(s))
+
+// ====================================
+// objects inside arrays
+// ====================================
+s = '[1, 2, {"name": true}]'
+console.log(arrObjParser(s))
+
+// ====================================
+// nested mixed objects (complicated Json)
+// ====================================
 s = '{"name": "stuff", "ro": [3, 2, "hi", [44, true]]}'
-console.log(objectParser(s))
+console.log(arrObjParser(s))
 
 s = '{"name": "nu-12", "tugo": [1, 2, [3, null]], "address": {"one": 1, "time": true, "room": {"map": "top"}}}'
-let obj = objectParser(s)
-console.log(obj)
+console.log(arrObjParser(s))
