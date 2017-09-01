@@ -54,10 +54,8 @@ function arrObjParser (s) {
     if (isArray) obj.push(result[0])
     else {
       let key = result[0]
-      rest = result[1]
-      result = valueParser(rest)
+      result = valueParser(result[1])
       obj[key] = result[0]
-      rest = result[1]
     }
 
     let decidingResult = regexParser(delim[1], null, result[1])
