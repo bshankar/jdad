@@ -15,12 +15,12 @@ function afterRegexMatch (s, matched, evalFn) {
   return null
 }
 
-const numberParser = regexParser.bind(null, '\\d+\\.?\\d*e?\\d*', parseFloat)
-const booleanParser = regexParser.bind(null, '(true|false)', function (s) { return s === 'true'})
+const numberParser = regexParser.bind(null, '-?\\d+\\.?\\d*e?-?\\d*', parseFloat)
+const booleanParser = regexParser.bind(null, '(true|false)', function (s) { return s === 'true' })
 const nullParser = regexParser.bind(null, 'null', function (s) { return null })
 const stringParser = regexParser.bind(null, '"[^"]*"', function (s) { return s.slice(1, s.length - 1) })
 
-function keyParser (s) {
+function keyColonParser (s) {
   let result = stringParser(s)
   if (!result) return null
 
@@ -31,7 +31,7 @@ function keyParser (s) {
 }
 
 function valueParser (s) {
-  const parsers = [nullParser, booleanParser, numberParser, stringParser, arrObjParser]
+  const parsers = [nullParser, booleanParser, numberParser, stringParser, jsonParser]
   for (let i in parsers) {
     let result = parsers[i](s)
     if (result) return result
@@ -39,7 +39,7 @@ function valueParser (s) {
   return null
 }
 
-function arrObjParser (s) {
+function jsonParser (s) {
   const isArray = regexParser('\\[', null, s) !== null
   let obj = isArray ? [] : {}
   const delim = isArray ? ['\\[', '\\]'] : ['{', '}']
@@ -48,7 +48,7 @@ function arrObjParser (s) {
 
   while (1) {
     let rest = result[1]
-    result = isArray ? valueParser(rest) : keyParser(rest)
+    result = isArray ? valueParser(rest) : keyColonParser(rest)
     if (!result) return [obj, regexParser(delim[1], null, rest)[1]]
 
     if (isArray) obj.push(result[0])
@@ -85,8 +85,8 @@ console.log(booleanParser(s))
 s = 'null here in nullParser'
 console.log(nullParser(s))
 
-s = '  "name"  :  "keyParser"'
-console.log(keyParser(s))
+s = '  "name"  :  "keyColonParser"'
+console.log(keyColonParser(s))
 
 s = 'null in valueParser'
 console.log(valueParser(s))
@@ -99,54 +99,54 @@ console.log(valueParser(s))
 // ====================================
 
 s = '[]'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
 
 s = '[1, true, "hi"]'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
 
 // ====================================
 // simple objects
 // ====================================
 
 s = '{}'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
 
 s = '{"name": 1}'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
 
 s = '{"name": "something", "ro": 2235, "dead": true}'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
 
 // ====================================
 // nested arrays
 // ====================================
 
 s = '[1, null, [133, false]]'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
 
 // ====================================
 // nested objects
 // ====================================
 s = '{"name": 18, "address": {"street": 19}}'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
 
 // ====================================
 // arrays inside objects
 // ====================================
 s = '{"names": [1, 2, 3, 4], "other": true}'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
 
 // ====================================
 // objects inside arrays
 // ====================================
 s = '[1, 2, {"name": true}]'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
 
 // ====================================
 // nested mixed objects (complicated Json)
 // ====================================
 s = '{"name": "stuff", "ro": [3, 2, "hi", [44, true]]}'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
 
 s = '{"name": "nu-12", "tugo": [1, 2, [3, null]], "address": {"one": 1, "time": true, "room": {"map": "top"}}}'
-console.log(arrObjParser(s))
+console.log(jsonParser(s))
