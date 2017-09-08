@@ -1,0 +1,3 @@
+* JDAD
+
+Simple Json parser in Javascript
