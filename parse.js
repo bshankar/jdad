@@ -34,6 +34,7 @@ function containerParseHelper (delim, s) {
     if (delim[0] === '\\[') obj.push(result[0])
     else {
       let key = result[0]
+      console.log(result)
       result = valueParser(result[1])
       obj[key] = result[0]
     }
@@ -45,7 +46,7 @@ function containerParseHelper (delim, s) {
   }
 }
 
-const numberParser = regexParser.bind(null, '^[-+]?(\\d+\\.?\\d*([eE][-+]?\\d+)?|\\d*\\.?\\d+([eE][-+]?\\d+)?)$', parseFloat)
+const numberParser = regexParser.bind(null, '[-+]?(\\d+\\.?\\d*([eE][-+]?\\d+)?|\\d*\\.?\\d+([eE][-+]?\\d+)?)', parseFloat)
 const booleanParser = regexParser.bind(null, '(?:true|false)', function (s) { return s === 'true' })
 const nullParser = regexParser.bind(null, 'null', function (s) { return null })
 const stringParser = regexParser.bind(null, '"(?:\\\\"|[^"])*"', function (s) { return s.slice(1, s.length - 1) })
@@ -61,11 +62,14 @@ const util = require('util')
 const filename = process.argv[2]
 fs.readFile(filename, 'utf-8', function (err, s) {
   if (err) throw err
-  try {
-    let result = objectParser(s)
-    if (result) console.log(util.inspect(result[0], false, null))
-    else console.log('Invalid Json')
-  } catch (e) {
-    console.log('Invalid Json')
-  }
+  let result = objectParser(s)
+  if (result) console.log(util.inspect(result[0], false, null))
+ 
+  // try {
+    // let result = objectParser(s)
+    // if (result) console.log(util.inspect(result[0], false, null))
+    // else console.log('Invalid Json')
+  // } catch (e) {
+    // console.log('Invalid Json')
+  // }
 })
