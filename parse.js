@@ -45,7 +45,7 @@ function containerParseHelper (delim, s) {
   }
 }
 
-const numberParser = regexParser.bind(null, '[-+]?\\d+\\.?\\d*[eE]?[-+]?\\d*', parseFloat)
+const numberParser = regexParser.bind(null, '^[-+]?(\\d+\\.?\\d*([eE][-+]?\\d+)?|\\d*\\.?\\d+([eE][-+]?\\d+)?)$', parseFloat)
 const booleanParser = regexParser.bind(null, '(?:true|false)', function (s) { return s === 'true' })
 const nullParser = regexParser.bind(null, 'null', function (s) { return null })
 const stringParser = regexParser.bind(null, '"(?:\\\\"|[^"])*"', function (s) { return s.slice(1, s.length - 1) })
