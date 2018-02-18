@@ -1,3 +1,18 @@
 * JDAD
+An extremely tiny JSON parser written in Js to learn how recursive
+descent parsing works. The [[https://github.com/bshankar/jdad/blob/master/src/parse.js][parser]] is just 44 LOC!
 
-Simple Json parser in Javascript
+* Usage
+  #+BEGIN_SRC shell
+  # Parsing a file
+  node src/index.js test/twitter.json
+
+  # Benchmark against JSON.parse
+  node src/index.js test/twitter.json bench
+  #+END_SRC
+
+* Limitations
+  - Extremely slow! 50-100 times slower than =JSON.parse=.
+  - Does not show where a syntax error occurred. It just returns =null=
+    when an invalid JSON is encountered.
+  - Does not convert Unicode escape sequences to Unicode.
