@@ -1,7 +1,7 @@
 * JDAD
 An extremely tiny JSON parser written in Js to learn how recursive
 descent parsing works. The [[https://github.com/bshankar/jdad/blob/master/src/parse.js][parser]]'s design is inspired by [[https://en.wikipedia.org/wiki/Monad_(functional_programming)][Monads]] and
-is just 44 LOC!
+is just 42 SLOC!
 
 ** Usage
    #+BEGIN_SRC shell
