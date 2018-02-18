@@ -1,0 +1,28 @@
+{
+  "name": "jdad",
+  "version": "1.0.0",
+  "description": "A tiny JSON parser",
+  "main": "src/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bshankar/jdad.git"
+  },
+  "keywords": [
+    "JSON parser"
+  ],
+  "author": "Bhavani Shankar E",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bshankar/jdad/issues"
+  },
+  "homepage": "https://github.com/bshankar/jdad#readme",
+  "devDependencies": {
+    "standard": "^10.0.3"
+  }
+}
