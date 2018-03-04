@@ -30,6 +30,7 @@ function containerParser (open, close, s, acc) {
     const hasEnded = reParser(close, resElement || res)
     if (hasEnded) return [acc, hasEnded[1]]
     res = reParser(/^,/, resElement)
+    if (res && reParser(close, res)) return null
   }
   return null
 }
