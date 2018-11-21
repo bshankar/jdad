@@ -35,13 +35,13 @@ function containerParser (open, close, s, acc) {
   return null
 }
 
-const nullParser = s => reParser(/^null/, s, x => null)
+const nullParser = s => reParser(/^null/, s, () => null)
 const boolParser = s => reParser(/^(?:true|false)/, s, x => x === 'true')
-const numberParser = s => reParser(/^-?\d+\.?\d*(?:[eE][-+]?\d+)?/, s, parseFloat)
+const numParser = s => reParser(/^-?\d+\.?\d*(?:[eE][-+]?\d+)?/, s, parseFloat)
 const stringParser = s => reParser(/^"(?:\\"|[^"])*"/, s, x => x.slice(1, -1))
 const arrayParser = s => containerParser(/^\[/, /^\]/, s, [])
 const objectParser = s => containerParser(/^\{/, /^\}/, s, {})
-const valueParser = s => stringParser(s) || numberParser(s) || arrayParser(s) ||
+const valueParser = s => stringParser(s) || numParser(s) || arrayParser(s) ||
   boolParser(s) || nullParser(s) || objectParser(s)
 
 module.exports = { valueParser }
