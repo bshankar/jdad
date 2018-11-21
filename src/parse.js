@@ -1,11 +1,11 @@
 function reParser (pattern, s, inner) {
   if (!s) return null
-  if (typeof s === 'string') s = ['', s]
-  const res = pattern.exec(s[1].trim())
+  if (s instanceof Array) s = s[1]
+  const res = pattern.exec(s.trim())
   if (res) {
     const eaten = res[0]
     const len = res[0].length
-    return [inner ? inner(eaten) : eaten, s[1].trim().slice(len)]
+    return [inner ? inner(eaten) : eaten, s.trim().slice(len)]
   }
   return null
 }
