@@ -1,6 +1,6 @@
 function reParser (pattern, s, eval = x => x) {
   if (!s) return null
-  if (s instanceof Array) s = s[1]
+  if (Array.isArray(s)) s = s[1]
   const res = pattern.exec(s.trim())
   if (res) return [eval(res[0]), s.trim().slice(res[0].length)]
   return null
