@@ -24,10 +24,13 @@ function containerParser (open, close, s, acc, isArray) {
   return null
 }
 
+const splChars  = { b: '\b', f: '\f', n: '\n', r: '\r', t: '\t'}
 const nullParser = s => reParser(/^null/, s, () => null)
 const boolParser = s => reParser(/^(?:true|false)/, s, x => x === 'true')
 const numParser = s => reParser(/^-?\d+\.?\d*(?:[eE][-+]?\d+)?/, s, parseFloat)
-const stringParser = s => reParser(/^"(?:\\"|[^"])*"/, s, x => x.slice(1, -1))
+const stringParser = s => reParser(/^"(?:\\"|[^"])*(?<=[^\\])"/, s, x =>
+  x.slice(1, -1).replace(/\\([bfnrt]|u[0-9A-Fa-f]{4})/g, (_, $1) =>
+    splChars[$1] || String.fromCharCode(parseInt($1.slice(1), 16))))
 const arrayParser = s => containerParser(/^\[/, /^\]/, s, [], true)
 const objectParser = s => containerParser(/^\{/, /^\}/, s, {}, false)
 module.exports.valueParser = s => stringParser(s) || numParser(s) ||
